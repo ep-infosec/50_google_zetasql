@@ -1,0 +1,54 @@
+#
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Known errors file for zetasql compliance framework. Add labels and queries
+# here to exclude them from compliance tests.
+
+known_errors {
+  # TODO: Implement this function.
+  mode: ALLOW_UNIMPLEMENTED
+  label: "analytic_st_accum_test:analytic_st_accum_basic"
+}
+
+known_errors {
+  # TODO: Implement these functions.
+  mode: ALLOW_UNIMPLEMENTED
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_init_double_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_init_int64_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_init_uint64_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_double_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_int64_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_partial_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_uint64_basic"
+}
+
+known_errors {
+  # TODO: Correct these tests or the function signatures
+  mode: ALLOW_ERROR
+  reason: "Compiletime Error: Argument 2 to KLL_QUANTILES.MERGE_POINT_INT64 must be between 0 and 1"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_point_double_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_point_int64_basic"
+  label: "analytic_kll_quantiles_test:analytic_kll_quantiles_merge_point_uint64_basic"
+}
+
+known_errors {
+  # TODO: Implement these functions
+  mode: ALLOW_UNIMPLEMENTED
+  label: "collation_test:analytic_percentile_disc_with_collation_binary"
+  label: "collation_test:analytic_percentile_disc_with_collation_ci"
+  label: "collation_test:string_agg_with_sort_key_with_collation_binary"
+  label: "collation_test:string_agg_with_sort_key_with_collation_ci"
+}

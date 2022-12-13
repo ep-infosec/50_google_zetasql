@@ -1,0 +1,342 @@
+[default required_features=JSON_TYPE]
+[name=json_int_scalar]
+SELECT JSON '1'
+--
+ARRAY<STRUCT<JSON>>[{1}]
+==
+[name=json_string_scalar]
+SELECT JSON '"foo"'
+--
+ARRAY<STRUCT<JSON>>[{"foo"}]
+==
+[name=json_array]
+SELECT JSON '["foo", 12, null, 0.123]'
+--
+ARRAY<STRUCT<JSON>>[{["foo",12,null,0.123]}]
+==
+[name=json_object]
+SELECT JSON '{"a": "foo", "b": 12, "c": null, "d": 0.123}'
+--
+ARRAY<STRUCT<JSON>>[{{"a":"foo","b":12,"c":null,"d":0.123}}]
+==
+[name=json_object_and_array]
+SELECT JSON '{"a": "foo", "b": 12, "c": null, "d": [{"f": "bar"}, {"d": 1}, [null, 1]]}'
+--
+ARRAY<STRUCT<JSON>>[
+  {{"a":"foo","b":12,"c":null,"d":[{"f":"bar"},{"d":1},[null,1]]}}
+]
+==
+[name=json_escaping]
+SELECT JSON '{"a\\"b\\\\c": 12}'
+--
+ARRAY<STRUCT<JSON>>[{{"a\"b\\c":12}}]
+==
+[name=json_null]
+SELECT JSON 'null' IS NULL, JSON_EXTRACT(JSON 'null', "$") IS NULL,
+       JSON_EXTRACT(JSON 'null', "$.a") IS NULL
+--
+ARRAY<STRUCT<BOOL, BOOL, BOOL>>[{false, false, true}]
+==
+[name=json_extract]
+SELECT JSON_EXTRACT(JSON '{"a": [1, {"b.c": [10, 20]}]}', "$[a][1]['b.c']")
+--
+ARRAY<STRUCT<JSON>>[{[10,20]}]
+==
+[name=json_extract_scalar]
+SELECT JSON_EXTRACT_SCALAR(JSON '{"a": [1, {"b.c": [10, 20]}]}',
+  "$[a][1]['b.c'][0]")
+--
+ARRAY<STRUCT<STRING>>[{"10"}]
+==
+[name=json_query]
+SELECT JSON_QUERY(JSON '{"a": [1, {"b.c": [10, 20]}]}', "$.a[1].\"b.c\"")
+--
+ARRAY<STRUCT<JSON>>[{[10,20]}]
+==
+[name=json_query_no_validation]
+[required_features=JSON_TYPE]
+SELECT JSON_QUERY(JSON '{"a": [1, {"b.c": [10, 20]}]}', '$.a[1]."b.c"')
+--
+ARRAY<STRUCT<JSON>>[{[10,20]}]
+==
+[name=json_value]
+SELECT JSON_VALUE(JSON '{"a": [1, {"b.c": [10, 20]}]}', "$.a[1].\"b.c\"[0]")
+--
+ARRAY<STRUCT<STRING>>[{"10"}]
+==
+[name=json_extract_scalar_json_value_one_argument]
+SELECT JSON_EXTRACT_SCALAR(JSON '"hello there"'), JSON_VALUE(JSON '"my friend"')
+--
+ARRAY<STRUCT<STRING, STRING>>[{"hello there", "my friend"}]
+==
+[name=json_extract_array]
+SELECT JSON_EXTRACT_ARRAY(JSON '{"a.b": [1, {"c": "foo"}, null]}', "$['a.b']")
+--
+ARRAY<STRUCT<ARRAY<>>>[{ARRAY<JSON>[1, {"c":"foo"}, null]}]
+==
+[required_features=JSON_TYPE,JSON_ARRAY_FUNCTIONS]
+[name=json_extract_string_array]
+SELECT JSON_EXTRACT_STRING_ARRAY(JSON '{"a.b": [1, "foo", null]}', "$['a.b']")
+--
+ARRAY<STRUCT<ARRAY<>>>[{ARRAY<STRING>["1", "foo", NULL]}]
+==
+[required_features=JSON_TYPE,JSON_ARRAY_FUNCTIONS]
+[name=json_query_array]
+SELECT JSON_QUERY_ARRAY(JSON '{"a.b": [1, {"c": "foo"}, null]}', "$.\"a.b\"")
+--
+ARRAY<STRUCT<ARRAY<>>>[{ARRAY<JSON>[1, {"c":"foo"}, null]}]
+==
+[required_features=JSON_TYPE,JSON_ARRAY_FUNCTIONS]
+[name=json_query_array_no_validation]
+SELECT JSON_QUERY_ARRAY(JSON '{"a.b": [1, {"c": "foo"}, null]}', '$."a.b"')
+--
+ARRAY<STRUCT<ARRAY<>>>[{ARRAY<JSON>[1, {"c":"foo"}, null]}]
+==
+[required_features=JSON_TYPE,JSON_ARRAY_FUNCTIONS]
+[name=json_value_array]
+SELECT JSON_VALUE_ARRAY(JSON '{"a.b": [1, "foo", null]}', "$.\"a.b\"")
+--
+ARRAY<STRUCT<ARRAY<>>>[{ARRAY<STRING>["1", "foo", NULL]}]
+==
+[name=json_dot_notation]
+SELECT (JSON '{"a": "foo"}').a
+--
+ARRAY<STRUCT<a JSON>>[{"foo"}]
+==
+[name=json_dot_notation_special_characters]
+SELECT (JSON '{"a\\"\\\\foo\\t@! \'bar": {"b.c": [10, 20]}}').`a\"\\foo\t@! \'bar`.`b.c`
+--
+ARRAY<STRUCT<b.c JSON>>[{[10,20]}]
+==
+[name=json_dot_notation_invalid_paths]
+SELECT json_val.field, json_val.fie, json_val.array, json_val.array.field2 FROM
+(SELECT JSON '{"field": 1, "array": [{"field2": 20}, {"field2": 30}]}' AS json_val)
+--
+ARRAY<STRUCT<field JSON, fie JSON, array JSON, field2 JSON>>[
+  {
+    1,
+    NULL,
+    [{"field2":20},{"field2":30}],
+    NULL
+  }
+]
+==
+[name=json_subscript_int64_and_string]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[0]["a"]
+--
+ARRAY<STRUCT<JSON>>[{"foo"}]
+==
+[name=json_subscript_invalid_index]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[2]
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_null_json]
+SELECT (JSON 'null')[0]
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_special_character]
+SELECT (JSON '{"a\\"\\\\foo\\t@! \'bar": {"b.c": [10, 20]}}')['a"\\foo\t@! \'bar']['b.c']
+--
+ARRAY<STRUCT<JSON>>[{[10,20]}]
+==
+[name=json_subscript_invalid_paths]
+SELECT json_val["field"], json_val["fie"], json_val.array[0]["field2"], json_val.array1[0]["field2"] FROM
+(SELECT JSON '{"field": 1, "array": [{"field2": 20}, {"field2": 30}]}' AS json_val)
+--
+ARRAY<STRUCT<JSON, JSON, JSON, JSON>>[{1, NULL, 20, NULL}]
+==
+[name=json_subscript_null]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[NULL];
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_null_string]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[CAST(NULL AS STRING)]
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_int64_null_string]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[0][CAST(NULL AS STRING)];
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_int64_null_string_param]
+[parameters=CAST(NULL AS STRING) AS string_null_param]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[0][@string_null_param];
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_null_int64_string_param]
+[parameters=CAST(NULL AS INT64) AS int64_null_param, CAST(NULL AS STRING) AS string_null_param]
+SELECT (JSON '[{"a": "foo"}, {"a": "bar"}]')[@int64_null_param][@string_null_param];
+--
+ARRAY<STRUCT<JSON>>[{NULL}]
+==
+[name=json_subscript_computed_param]
+SELECT (JSON '{"f1": {"f2":"foo"}}')[CONCAT('f', '1')][CONCAT('f', '2')];
+--
+ARRAY<STRUCT<JSON>>[{"foo"}]
+==
+[name=json_subscript_valid_json_test]
+[required_features=JSON_TYPE]
+SELECT (JSON '{"f1": {"f2":"foo"}}')['f1']['f2']
+--
+ARRAY<STRUCT<JSON>>[{"foo"}]
+==
+[name=parse_json]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS]
+WITH Round AS (SELECT "round" foo1),
+Number AS (SELECT "2.75897182587158791241578135873519" foo3)
+SELECT PARSE_JSON('1'), PARSE_JSON('[1, null, true]'),
+PARSE_JSON('2.5', wide_number_mode=>'exact'),
+PARSE_JSON('2.2412421353246235436', wide_number_mode=>'round'),
+PARSE_JSON('18446744073709551615', wide_number_mode=>'exact'),
+PARSE_JSON(foo3, wide_number_mode=>'round'),
+PARSE_JSON('123', wide_number_mode=>foo1),
+PARSE_JSON('456', wide_number_mode=>concat('ex', 'act'))
+FROM Round, Number;
+--
+ARRAY<STRUCT<JSON, JSON, JSON, JSON, JSON, JSON, JSON, JSON>>[
+  {1,
+   [1,null,true],
+   2.5,
+   2.2412421353246237,
+   18446744073709551615,
+   2.758971825871588,
+   123,
+   456}
+]
+==
+[name=json_bool]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT bool(JSON 'true');
+--
+ARRAY<STRUCT<BOOL>>[{true}]
+==
+[name=json_bool_string_input]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT bool(JSON '"true"');
+--
+ERROR: generic::out_of_range: The provided JSON input is not a boolean
+==
+[name=json_int64]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT int64(JSON '1');
+--
+ARRAY<STRUCT<INT64>>[{1}]
+==
+[name=json_int64_double_with_fractional_part]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT int64(JSON '10.1');
+--
+ERROR: generic::out_of_range: The provided JSON number: 10.1 cannot be converted to an integer
+==
+[name=json_int64_double_without_fractional_part]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT int64(JSON '10.0');
+--
+ARRAY<STRUCT<INT64>>[{10}]
+==
+[name=json_int64_string_input]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT int64(JSON '"4"');
+--
+ERROR: generic::out_of_range: The provided JSON input is not an integer
+==
+[name=json_string]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT string(JSON '"test"');
+--
+ARRAY<STRUCT<STRING>>[{"test"}]
+==
+[name=json_string_string_num]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT string(JSON '"123"')
+--
+ARRAY<STRUCT<STRING>>[{"123"}]
+==
+[name=json_string_num_input]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT string(JSON '123')
+--
+ERROR: generic::out_of_range: The provided JSON input is not a string
+==
+[name=json_type_string]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT json_type(JSON '"test"');
+--
+ARRAY<STRUCT<STRING>>[{"string"}]
+==
+[name=json_double]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '1.0');
+--
+ARRAY<STRUCT<DOUBLE>>[{1}]
+==
+[name=json_double_exact]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '1.0', wide_number_mode=>'exact');
+--
+ARRAY<STRUCT<DOUBLE>>[{1}]
+==
+[name=json_double_2]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '1.1');
+--
+ARRAY<STRUCT<DOUBLE>>[{1.1}]
+==
+[name=json_negative_double]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '-1.0');
+--
+ARRAY<STRUCT<DOUBLE>>[{-1}]
+==
+[name=json_negative_double_2]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '-1.1');
+--
+ARRAY<STRUCT<DOUBLE>>[{-1.1}]
+==
+[name=json_double_round]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '-0.0000002414214151379150123', wide_number_mode=>'round');
+--
+ARRAY<STRUCT<DOUBLE>>[{-2.41421415137915e-07}]
+==
+[name=json_double_max_unsigned_64_exact]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '18446744073709551615', wide_number_mode=>'exact');
+--
+ERROR: generic::out_of_range: JSON number: 18446744073709551615 cannot be converted to DOUBLE without loss of precision
+==
+[name=json_double_max_unsigned_64_round]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '18446744073709551615', wide_number_mode=>'round');
+--
+ARRAY<STRUCT<DOUBLE>>[{1.8446744073709552e+19}]
+==
+[name=json_double_max_unsigned_64_implicit_round]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '18446744073709551615');
+--
+ARRAY<STRUCT<DOUBLE>>[{1.8446744073709552e+19}]
+==
+[name=json_double_invalid_wide_number_mode]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS]
+SELECT double(JSON '18', wide_number_mode=>'roundish');
+--
+ERROR: generic::out_of_range: Invalid `wide_number_mode` specified: roundish
+==
+[name=json_safe_double_fail_resolve_to_null]
+[required_features=JSON_TYPE,NAMED_ARGUMENTS,JSON_VALUE_EXTRACTION_FUNCTIONS,V_1_2_SAFE_FUNCTION_CALL]
+SELECT SAFE.double(JSON '18446744073709551615', wide_number_mode=>'exact');
+--
+ARRAY<STRUCT<DOUBLE>>[{NULL}]
+==
+[name=json_safe_double]
+[required_features=JSON_TYPE,JSON_VALUE_EXTRACTION_FUNCTIONS,V_1_2_SAFE_FUNCTION_CALL]
+SELECT SAFE.double(JSON '-1.1');
+--
+ARRAY<STRUCT<DOUBLE>>[{-1.1}]
